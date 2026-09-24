@@ -1,0 +1,32 @@
+{
+  "name": "agents",
+  "interface": {
+    "displayName": "Agents"
+  },
+  "plugins": [
+    {
+      "name": "agents-ledger",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agents-ledger"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "jev-review",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jev-review"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

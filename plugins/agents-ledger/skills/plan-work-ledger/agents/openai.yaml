@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Work Ledger"
+  short_description: "Turn a grilled brief into an execution ledger"
+  default_prompt: "Use $plan-work-ledger to turn the resolved brief into a validated execution ledger."

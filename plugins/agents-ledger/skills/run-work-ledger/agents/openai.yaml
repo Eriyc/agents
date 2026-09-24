@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Work Ledger"
+  short_description: "Execute a work ledger with bounded agents"
+  default_prompt: "Use $run-work-ledger to execute the active validated work ledger to acceptance."

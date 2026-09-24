@@ -1,0 +1,21 @@
+{
+  "name": "agents-ledger",
+  "version": "0.1.0",
+  "description": "Plan and execute bounded Beads work ledgers with optional Jev feedback.",
+  "author": {
+    "name": "Eriyc"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Work Ledger",
+    "shortDescription": "Plan and run bounded Beads work",
+    "longDescription": "Turn a resolved brief into an owned Beads issue graph, then execute it with bounded context, evidence, and review.",
+    "developerName": "Eriyc",
+    "category": "Developer Tools",
+    "capabilities": ["Agent Skills"],
+    "defaultPrompt": [
+      "Plan this resolved brief with $plan-work-ledger.",
+      "Run the active goal with $run-work-ledger."
+    ]
+  }
+}

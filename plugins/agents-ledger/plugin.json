@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agents-ledger",
+  "version": "0.1.0",
+  "description": "Plan and execute bounded Beads work ledgers with optional Jev feedback.",
+  "author": {
+    "name": "Eriyc"
+  },
+  "skills": "./skills/"
+}

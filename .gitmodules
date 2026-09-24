@@ -1,0 +1,4 @@
+[submodule "plugins/jev-review"]
+	path = plugins/jev-review
+	url = https://github.com/Eriyc/jev-review.git
+	branch = main
