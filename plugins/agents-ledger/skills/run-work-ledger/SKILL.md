@@ -11,11 +11,11 @@ Follow the user's session model/provider choices for subagents. When using OpenA
 
 Use the supplied goal directory. If omitted, select one only when exactly one non-terminal Beads goal is clear. Read repository instructions and `docs/agent/work/README.md`. Beads alone owns mutable state; reject `state.yaml` or another live tracker. Verify that this plugin's MCP tools and the goal-local Beads database are available before execution; never fall back to YAML or create a repository-specific adapter.
 
-If a goal-local database is created or removed during execution, sync the VS Code workspace `beads.projects` setting as described in `plan-work-ledger`; the coordinator owns this shared configuration.
+Use the MCP server for every Beads operation. The Bun server invokes Beads internally; agents never run `bd` directly. Keep the existing board from `ledger_init` as a local status view.
 
-Call `ledger_ready`, then `ledger_task` for the selected issue. Supply the absolute Git worktree root as `workspaceRoot` and the relative goal directory as `goalDir` on every call. Use `ledger_document` for focused goal or workspace headings, lines, or character slices, and `ledger_validate_receipt` before accepting a worker receipt. The tools fail rather than truncate above 2 KiB ready/receipt, 8 KiB task, or 4 KiB excerpt. Never inject `bd prime`, raw issue JSON/history, full issue lists, documents, or directory dumps.
+Call `ledger_ready` to verify the existing goal database, then `ledger_task` for the selected issue. Supply the absolute Git worktree root as `workspaceRoot` and the relative goal directory as `goalDir` on every call. Use `ledger_document` for focused goal or workspace headings, lines, or character slices, and `ledger_validate_receipt` before accepting a worker receipt. The tools fail rather than truncate above 2 KiB ready/receipt, 8 KiB task, or 4 KiB excerpt. Never inject `bd prime`, raw issue JSON/history, full issue lists, documents, or directory dumps.
 
-When the user wants a visual status snapshot, call `ledger_status_page` and return its local HTML path. The bundled Bun command in the plugin README can keep that file current with `--watch`; agents do not author page files or start a web server.
+After `ledger_ready` confirms the existing database, call `ledger_init` to prepare this checkout's local board; it never reinitializes an existing database. Return its board path or open it in a browser. `ledger_status_page` only locates the existing file. Later MCP ledger calls refresh the board without a watcher or web server. Use `ledger_transition` for claim, block, reopen, and close; use `ledger_note` for Beads evidence. Only the coordinator calls mutation tools.
 
 Inspect HEAD, dirty/staged state, dependencies, base SHAs, and path ownership. Do not overwrite unrelated changes or dispatch concurrent writers with overlapping paths. Use safe worktree isolation when the execution request permits it.
 

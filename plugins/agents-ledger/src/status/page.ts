@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, 
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { parseJson, type RunCommand } from "../ledger/command.js";
-import { route, type Route } from "../ledger/paths.js";
+import { route, type GoalRoute, type Route } from "../ledger/paths.js";
 
 const MAX_ISSUES = 500;
 const TEMPLATE_MARKER = "<!-- LEDGER_SNAPSHOT -->";
@@ -76,7 +76,7 @@ export async function statusSnapshot(target: Route, run: RunCommand): Promise<St
   };
 }
 
-export function statusPagePath(target: Route): string {
+export function statusPagePath(target: GoalRoute): string {
   const key = createHash("sha256").update(target.goal).digest("hex").slice(0, 16);
   return join(tmpdir(), "agents-ledger", "status", key + ".html");
 }
@@ -91,6 +91,10 @@ export function renderStatusPage(snapshot: StatusSnapshot): string {
 
 export async function writeStatusPage(workspaceRoot: string, goalDir: string, run: RunCommand): Promise<string> {
   const target = await route(workspaceRoot, goalDir, run);
+  return writeStatusPageForTarget(target, run);
+}
+
+export async function writeStatusPageForTarget(target: Route, run: RunCommand): Promise<string> {
   const html = renderStatusPage(await statusSnapshot(target, run));
   const output = statusPagePath(target);
   mkdirSync(dirname(output), { recursive: true });
@@ -103,4 +107,10 @@ export async function writeStatusPage(workspaceRoot: string, goalDir: string, ru
   }
   if (statSync(output).size === 0) throw new Error("status page was empty");
   return output;
+}
+
+export async function refreshExistingStatusPage(target: Route, run: RunCommand): Promise<boolean> {
+  if (!existsSync(statusPagePath(target))) return false;
+  await writeStatusPageForTarget(target, run);
+  return true;
 }

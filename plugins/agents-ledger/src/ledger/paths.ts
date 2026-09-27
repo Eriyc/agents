@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { parseJson, type RunCommand } from "./command.js";
 
 export type Route = { workspace: string; goal: string; beads: string };
+export type GoalRoute = Pick<Route, "workspace" | "goal">;
 
 function contained(root: string, path: string): boolean {
   const rel = relative(root, path);
@@ -34,7 +35,7 @@ export function fileInside(root: string, input: string, label: string): string {
   return absolute;
 }
 
-export async function route(workspaceRoot: string, goalDir: string, run: RunCommand): Promise<Route> {
+export async function routeGoal(workspaceRoot: string, goalDir: string, run: RunCommand): Promise<GoalRoute> {
   if (!isAbsolute(workspaceRoot)) throw new Error("workspaceRoot must be absolute");
   const workspace = realpathSync(workspaceRoot);
   if (!statSync(workspace).isDirectory()) throw new Error("workspaceRoot must be a directory");
@@ -44,6 +45,11 @@ export async function route(workspaceRoot: string, goalDir: string, run: RunComm
   if (!contained(workspace, goal) || samePath(workspace, goal)) throw new Error("goalDir escapes workspaceRoot");
   if (!statSync(goal).isDirectory() || !existsSync(join(goal, "goal.md")))
     throw new Error("goalDir requires a goal.md file");
+  return { workspace, goal };
+}
+
+export async function route(workspaceRoot: string, goalDir: string, run: RunCommand): Promise<Route> {
+  const { workspace, goal } = await routeGoal(workspaceRoot, goalDir, run);
   const beads = realpathSync(join(goal, ".beads"));
   if (!contained(goal, beads) || !statSync(beads).isDirectory())
     throw new Error("goalDir requires a goal-local .beads directory");

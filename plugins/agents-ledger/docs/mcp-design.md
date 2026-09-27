@@ -3,9 +3,10 @@
 ## Purpose
 
 Move the bounded Beads context adapter out of every consumer repository and into
-`agents-ledger`. The server is a local Bun process over MCP stdio. It reads
-goal-local Beads state through `bd` and reads selected repository files; it does
-not own another issue database or copy mutable issue state into plugin files.
+`agents-ledger`. The server is a local Bun process over MCP stdio. It reads and
+mutates goal-local Beads state through `bd`, and reads selected repository files.
+Only the coordinator may call its mutation tools. It does not own another issue
+database or copy mutable issue state into plugin files.
 
 The first release replaces PotSpot's `scripts/agent-context/beads.ts` and
 `packet.ts` behavior. Planning and execution policy remains in the two skills.
@@ -20,7 +21,11 @@ plugins/agents-ledger/
   src/server.ts            # stdio entrypoint
   src/mcp/server.ts        # tool registration and MCP error mapping
   src/ledger/paths.ts      # workspace and goal routing
-  src/ledger/beads.ts      # read-only bd invocation and projection
+  src/ledger/beads.ts      # bounded bd reads and projection
+  src/ledger/mutations.ts  # bounded issue creation, dependencies, notes
+  src/ledger/transitions.ts # coordinator status changes
+  src/status/page.ts       # local HTML board generation and refresh
+  assets/status.html       # bundled, self-contained board template
   src/ledger/documents.ts  # bounded file excerpts
   src/ledger/receipt.ts    # receipt validation
   dist/server.js           # committed Bun bundle for plugin installation
@@ -33,7 +38,8 @@ with `type: "stdio"`, `command: "bun"`, and
 bundle so installing the plugin does not require `bun install`. Keep stdout
 exclusively for MCP messages; diagnostics go to stderr. The server requires a
 working `bd` executable on the host and reports its absence as a tool error.
-No HTTP listener, daemon, or plugin-owned state file is required.
+No HTTP listener or daemon is required. A local HTML board is generated from
+Beads at initialization and rewritten after later MCP ledger calls.
 
 ## Routing and trust boundary
 
@@ -61,7 +67,7 @@ execute document content.
 
 ## MCP tools
 
-Expose four narrow tools. Each returns a small text packet; errors use MCP
+The original bounded read interface exposes four narrow tools. Each returns a small text packet; errors use MCP
 `isError` with an actionable message. Do not return raw `bd` JSON alongside the
 text, since that defeats the packet limit. All sizes are UTF-8 bytes of the
 complete returned packet, measured before sending; never truncate silently.
@@ -104,6 +110,15 @@ state paths even if listed as writable. Return a verdict, not the receipt body.
 Validation checks the receipt's shape and claimed ownership; the coordinator
 still compares it with the actual diff and test evidence before updating Beads.
 
+The coordinator also uses `ledger_init`, `ledger_create`, `ledger_depends`,
+`ledger_note`, and `ledger_transition` for setup and mutation. Their arguments
+are bounded and passed to `bd` as argv, with no shell. `ledger_init` performs
+`bd init` only when the goal database is missing; it validates an existing
+database without reinitializing it. The same call creates or refreshes the
+local HTML board. `ledger_status_page` only returns the existing board path.
+Successful MCP ledger calls refresh an existing board from read-only Beads
+queries. The board is a disposable view, not authoritative state.
+
 ## Process behavior
 
 Use `Bun.spawn` with an argv array, explicit cwd, captured stdout/stderr, a
@@ -111,9 +126,9 @@ Use `Bun.spawn` with an argv array, explicit cwd, captured stdout/stderr, a
 Parse JSON only on successful exit and validate the expected fields before
 projection. Make each request independent so concurrent calls for different
 goals cannot share
-mutable routing state. The tools are read-only; claims, issue creation, status
-updates, staging, and commits remain explicit coordinator actions using `bd`
-and Git. MCP tool annotations should reflect that read-only behavior.
+mutable routing state. Read tools have read-only annotations; coordinator
+mutation tools have write annotations. Staging and commits remain explicit
+coordinator Git actions outside the MCP server.
 
 ## Migration and acceptance
 
@@ -130,6 +145,6 @@ and Git. MCP tool annotations should reflect that read-only behavior.
 4. Verify installation in Codex and another supported MCP host. An MCP unit
    test alone does not prove the host loads `mcp.json` or can launch Bun and `bd`.
 
-The first release deliberately leaves Beads initialization and all mutations
-outside the MCP server. That keeps the shared interface small and preserves the
-current single-coordinator write rule.
+The first release left Beads initialization and mutations outside the MCP
+server. Version 0.4 moves bounded setup and issue mutations into MCP while
+preserving the single-coordinator write rule. Agents do not invoke `bd` directly.

@@ -12,13 +12,14 @@ import type { RunCommand } from "../src/ledger/command.js";
 const folders: string[] = [];
 afterEach(() => { for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true }); });
 
-function fixture() {
+function fixture(initialized = true) {
   const workspace = mkdtempSync(join(tmpdir(), "ledger-mcp-"));
   folders.push(workspace);
   const goalDir = "docs/agent/work/sample";
   const goal = join(workspace, "docs", "agent", "work", "sample");
   const beads = join(goal, ".beads");
-  mkdirSync(beads, { recursive: true });
+  mkdirSync(goal, { recursive: true });
+  if (initialized) mkdirSync(beads);
   writeFileSync(join(goal, "goal.md"), "# Goal\n\n## Acceptance\nPass.\n");
   const issue = { id: "demo-1", title: "Implement sample", status: "open", assignee: "", description: "Use goal.md", acceptance_criteria: "Pass checks", metadata: { writable_paths: ["src/", "README.md"] }, dependencies: [{ id: "demo-0", status: "closed", dependency_type: "blocks" }] };
   const location = { workspaceRoot: workspace, goalDir };
@@ -56,7 +57,7 @@ describe("agents-ledger MCP", () => {
     const { client, close } = await connected(f.run);
     try {
       const tools = await client.listTools();
-      assert.deepEqual(tools.tools.map((tool) => tool.name), ["ledger_ready", "ledger_task", "ledger_document", "ledger_validate_receipt", "ledger_status_page"]);
+      assert.deepEqual(tools.tools.map((tool) => tool.name), ["ledger_init", "ledger_ready", "ledger_task", "ledger_document", "ledger_validate_receipt", "ledger_create", "ledger_depends", "ledger_note", "ledger_transition", "ledger_status_page"]);
       const ready = await client.callTool({ name: "ledger_ready", arguments: f.location });
       assert.equal(ready.isError, undefined);
       assert.match(message(ready), /demo-1 \| open \| Implement sample/);
@@ -73,13 +74,77 @@ describe("agents-ledger MCP", () => {
       const receipt = await client.callTool({ name: "ledger_validate_receipt", arguments: { ...f.location, issueId: "demo-1", receiptPath: "receipt.yaml" } });
       assert.match(message(receipt), /Worker receipt valid/);
       const page = await client.callTool({ name: "ledger_status_page", arguments: f.location });
-      assert.equal(page.isError, undefined);
-      const match = message(page).match(/Local status page: (.+\.html)/);
-      assert.ok(match?.[1]);
-      assert.equal(existsSync(match[1]), true);
-      assert.match(readFileSync(match[1], "utf8"), /Implement sample/);
-      unlinkSync(match[1]);
+      assert.equal(page.isError, true);
+      assert.match(message(page), /created when ledger_init/);
+      const ensured = await client.callTool({ name: "ledger_init", arguments: f.location });
+      assert.match(message(ensured), /Ledger verified\. Local status page:/);
+      const existing = message(ensured).match(/Local status page: (.+\.html)/)?.[1];
+      assert.ok(existing);
+      assert.equal(existsSync(existing), true);
+      unlinkSync(existing);
     } finally { await close(); }
+  });
+
+  it("initializes the database and board together, then refreshes the board after MCP mutations", async () => {
+    const f = fixture(false);
+    let created = false;
+    let status = "open";
+    const commands: string[][] = [];
+    const run: RunCommand = async (argv) => {
+      commands.push(argv);
+      if (argv[0] === "git") return f.workspace;
+      if (argv.includes("init")) { assert.deepEqual(argv.slice(0, 2), ["bd", "init"]); mkdirSync(f.beads); return ""; }
+      if (argv.includes("where")) return JSON.stringify({ path: f.beads });
+      if (argv.includes("create")) { created = true; return "demo-1\n"; }
+      if (argv.includes("close")) { status = "closed"; return ""; }
+      if (argv.includes("update")) {
+        if (argv.includes("--claim")) status = "in_progress";
+        else if (argv.includes("blocked")) status = "blocked";
+        else if (argv.includes("open")) status = "open";
+        return "";
+      }
+      if (argv.includes("list")) return JSON.stringify(created ? [{ ...f.issue, status }] : []);
+      if (argv.includes("ready")) return JSON.stringify(created && status === "open" ? [{ ...f.issue, status }] : []);
+      if (argv.includes("dep")) return "";
+      throw new Error("unexpected command " + argv.join(" "));
+    };
+    const { client, close } = await connected(run);
+    let board = "";
+    try {
+      const absent = await client.callTool({ name: "ledger_status_page", arguments: f.location });
+      assert.equal(absent.isError, true);
+      assert.equal(existsSync(f.beads), false);
+      const initialized = await client.callTool({ name: "ledger_init", arguments: f.location });
+      assert.equal(initialized.isError, undefined);
+      board = message(initialized).match(/Local status page: (.+\.html)/)?.[1] || "";
+      assert.ok(board);
+      assert.equal(existsSync(board), true);
+      const invalid = await client.callTool({ name: "ledger_create", arguments: { ...f.location, title: "Bad path", description: "Test", acceptance: "Test", writablePaths: ["../secret"] } });
+      assert.equal(invalid.isError, true);
+      assert.equal(created, false);
+      const createdIssue = await client.callTool({ name: "ledger_create", arguments: { ...f.location, title: "Implement sample", description: "Use goal.md", acceptance: "Pass checks", writablePaths: ["src/"], type: "task", priority: 2 } });
+      assert.match(message(createdIssue), /Created demo-1/);
+      assert.match(readFileSync(board, "utf8"), /Implement sample/);
+      const dependency = await client.callTool({ name: "ledger_depends", arguments: { ...f.location, issueId: "demo-1", blockedById: "demo-0" } });
+      assert.equal(dependency.isError, undefined);
+      const note = await client.callTool({ name: "ledger_note", arguments: { ...f.location, issueId: "demo-1", note: "Evidence recorded" } });
+      assert.equal(note.isError, undefined);
+      const noReason = await client.callTool({ name: "ledger_transition", arguments: { ...f.location, issueId: "demo-1", action: "close" } });
+      assert.equal(noReason.isError, true);
+      assert.equal(status, "open");
+      for (const [action, expected] of [["claim", "in_progress"], ["block", "blocked"], ["reopen", "open"], ["close", "closed"]] as const) {
+        const result = await client.callTool({ name: "ledger_transition", arguments: { ...f.location, issueId: "demo-1", action, ...(["block", "close"].includes(action) ? { reason: "Reviewed evidence" } : {}) } });
+        assert.equal(result.isError, undefined);
+        assert.match(readFileSync(board, "utf8"), new RegExp('"status":"' + expected + '"'));
+      }
+      const located = await client.callTool({ name: "ledger_status_page", arguments: f.location });
+      assert.equal(message(located), "Local status page: " + board);
+      assert.ok(commands.some((argv) => argv.includes("--claim")));
+      assert.ok(commands.some((argv) => argv.includes("--reason")));
+    } finally {
+      await close();
+      if (board && existsSync(board)) unlinkSync(board);
+    }
   });
 
   it("rejects a different Beads database, malformed JSON, and oversized packets", async () => {
@@ -177,7 +242,7 @@ describe("agents-ledger MCP", () => {
     const client = new Client({ name: "stdio-test", version: "1.0.0" });
     await client.connect(transport);
     try {
-      assert.equal((await client.listTools()).tools.length, 5);
+      assert.equal((await client.listTools()).tools.length, 10);
       const result = await client.callTool({ name: "ledger_ready", arguments: f.location });
       assert.equal(result.isError, true);
       assert.match(message(result), /cannot start bd|missing-bd|ENOENT/);

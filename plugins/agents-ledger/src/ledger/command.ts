@@ -2,6 +2,7 @@ export type RunCommand = (argv: string[], cwd: string) => Promise<string>;
 
 const MAX_OUTPUT = 1024 * 1024;
 const TIMEOUT_MS = 10_000;
+const MUTATION_TIMEOUT_MS = 60_000;
 
 async function readCapped(stream: ReadableStream<Uint8Array>, cap: number): Promise<string> {
   const reader = stream.getReader();
@@ -31,7 +32,8 @@ export const runCommand: RunCommand = async (argv, cwd) => {
   } catch (error) {
     throw new Error(`cannot start ${command}: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const timer = setTimeout(() => proc.kill(), TIMEOUT_MS);
+  const timeout = command === "bd" && !argv.includes("--readonly") ? MUTATION_TIMEOUT_MS : TIMEOUT_MS;
+  const timer = setTimeout(() => proc.kill(), timeout);
   try {
     const [stdout, stderr, code] = await Promise.all([
       readCapped(proc.stdout as ReadableStream<Uint8Array>, MAX_OUTPUT),
