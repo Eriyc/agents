@@ -10,8 +10,10 @@ My Codex plugins:
 Install [Git](https://git-scm.com/), [Bun](https://bun.sh/) (for Jev), and Codex. In a terminal, run:
 
 ```bash
-git clone --recurse-submodules https://github.com/Eriyc/agents.git
+git clone https://github.com/Eriyc/agents.git
 codex plugin marketplace add ./agents
 ```
 
 Restart Codex. Open the plugin directory, choose **Agents**, and install **Work Ledger** and **Jev Review**.
+
+Both plugins provide their skills and MCP servers from this repository. Jev Review needs `OPENROUTER_API_KEY` in the MCP process environment.

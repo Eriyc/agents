@@ -1,0 +1,33 @@
+{
+  "name": "jev-review",
+  "version": "0.2.1",
+  "description": "An iterative, local-first software-quality score loop for AI coding agents, powered by Jev.",
+  "author": {
+    "name": "Jev Review contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "mcp",
+    "software-quality",
+    "jev"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Jev Review",
+    "shortDescription": "Evaluate code quality with Jev",
+    "longDescription": "Score code changes and get one-off file judgment signals with Jev. The agent diagnoses issues and makes the fixes.",
+    "developerName": "Jev Review contributors",
+    "category": "Developer Tools",
+    "capabilities": [
+      "MCP tools",
+      "Agent Skill",
+      "Code review"
+    ],
+    "defaultPrompt": [
+      "Validate this change, then score its focused diff with jev_review. Diagnose weak metrics and rescore justified fixes.",
+      "Use jev_signal for one yes/no question about this file. Supply the file, answer meanings, and relevant context."
+    ]
+  }
+}

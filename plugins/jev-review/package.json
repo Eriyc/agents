@@ -1,0 +1,25 @@
+{
+  "name": "jev-review",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Local-first software-quality evaluation for AI coding agents, powered by Jev.",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "scripts": {
+    "build": "bun build ./src/server.ts --target=bun --outdir=dist --minify",
+    "check": "tsc --noEmit",
+    "test": "bun test",
+    "validate": "bun run check && bun run build && bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.12",
+    "typescript": "7.0.2"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "jev-review",
+  "version": "0.2.1",
+  "description": "An iterative, local-first software-quality score loop for AI coding agents, powered by Jev.",
+  "author": {
+    "name": "Jev Review contributors"
+  },
+  "license": "MIT"
+}

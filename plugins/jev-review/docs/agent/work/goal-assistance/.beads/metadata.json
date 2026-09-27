@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "goal_assistance",
+  "project_id": "ee09ef6e-bf2c-457a-81fa-16d4fa52cc21"
+}

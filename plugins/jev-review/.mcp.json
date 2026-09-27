@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "jev-review": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/server.js"],
+      "env_vars": ["OPENROUTER_API_KEY", "JEV_MODEL"]
+    }
+  }
+}
