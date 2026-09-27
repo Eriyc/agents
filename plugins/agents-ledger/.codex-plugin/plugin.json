@@ -12,7 +12,7 @@
     "longDescription": "Turn a resolved brief into an owned Beads issue graph, then execute it with bounded context, evidence, and review.",
     "developerName": "Eriyc",
     "category": "Developer Tools",
-    "capabilities": ["Agent Skills"],
+    "capabilities": ["Agent Skills", "MCP tools"],
     "defaultPrompt": [
       "Plan this resolved brief with $plan-work-ledger.",
       "Run the active goal with $run-work-ledger."
