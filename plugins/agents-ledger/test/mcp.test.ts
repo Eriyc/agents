@@ -64,6 +64,15 @@ describe("agents-ledger MCP", () => {
     assert.equal(resolveBeadsExecutable({ ...env, BEADS_PATH: "C:\\custom\\bd.exe" }), "C:\\custom\\bd.exe");
   });
 
+  if (process.platform === "win32") it("checks the user profile when a desktop MCP has a different LOCALAPPDATA", () => {
+    const profile = mkdtempSync(join(tmpdir(), "ledger-profile-"));
+    folders.push(profile);
+    const installed = join(profile, "AppData", "Local", "mise", "installs", "github-gastownhall-beads", "1.3.0", "bd.exe");
+    mkdirSync(join(profile, "AppData", "Local", "mise", "installs", "github-gastownhall-beads", "1.3.0"), { recursive: true });
+    writeFileSync(installed, "");
+    assert.equal(resolveBeadsExecutable({ PATH: "", LOCALAPPDATA: "C:\\wrong-profile", USERPROFILE: profile }), installed);
+  });
+
   it("exposes bounded ledger tools over MCP", async () => {
     const f = fixture();
     const { client, close } = await connected(f.run);

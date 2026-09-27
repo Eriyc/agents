@@ -19,18 +19,28 @@ export function resolveBeadsExecutable(env: NodeJS.ProcessEnv = process.env): st
     if (directory && existsSync(win32.join(directory, "bd.exe")))
       return win32.join(directory, "bd.exe");
   }
-  const localAppData = env.LOCALAPPDATA || win32.join(homedir(), "AppData", "Local");
-  const miseData = env.MISE_DATA_DIR || win32.join(localAppData, "mise");
-  for (const tool of ["github-gastownhall-beads", "beads"]) {
-    const installs = win32.join(miseData, "installs", tool);
-    if (!existsSync(installs)) continue;
-    const versions = readdirSync(installs, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
-    for (const version of versions) {
-      const executable = win32.join(installs, version, "bd.exe");
-      if (existsSync(executable)) return executable;
+  // Desktop plugin processes can receive a different LOCALAPPDATA/HOME than an
+  // interactive shell. Check the signed-in profile as well before giving up.
+  const profiles = [
+    env.LOCALAPPDATA,
+    env.USERPROFILE && win32.join(env.USERPROFILE, "AppData", "Local"),
+    env.HOMEDRIVE && env.HOMEPATH && win32.join(env.HOMEDRIVE, env.HOMEPATH, "AppData", "Local"),
+    env.USERNAME && win32.join(env.SystemDrive || "C:", "Users", env.USERNAME, "AppData", "Local"),
+    win32.join(homedir(), "AppData", "Local")
+  ].filter((value): value is string => !!value);
+  const miseDirs = new Set([env.MISE_DATA_DIR, ...profiles.map((profile) => win32.join(profile, "mise"))].filter((value): value is string => !!value));
+  for (const miseData of miseDirs) {
+    for (const tool of ["github-gastownhall-beads", "beads"]) {
+      const installs = win32.join(miseData, "installs", tool);
+      if (!existsSync(installs)) continue;
+      const versions = readdirSync(installs, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+      for (const version of versions) {
+        const executable = win32.join(installs, version, "bd.exe");
+        if (existsSync(executable)) return executable;
+      }
     }
   }
   return "bd";
