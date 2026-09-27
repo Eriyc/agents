@@ -5,7 +5,9 @@ description: Turn a resolved repository brief into a bounded Beads work ledger f
 
 # Plan work ledger
 
-Convert a resolved brief into an executable Beads issue graph. Use GPT-6 Luna Max or GPT-6 Sol light; Report if neither is available.
+Convert a resolved brief into an executable Beads issue graph. Keep the user's selected planner/coordinator model and reasoning effort; any provider is supported, including Astra as coordinator. Describe work by role and required capability, not a fixed model allowlist.
+
+For planned subagents, follow the user's session model/provider choices. When using OpenAI subagents, use only GPT-6 Luna (`gpt-6-luna`) with `xhigh` reasoning, including writers, reviewers, and nested delegates. For other providers, use their configured models and supported reasoning controls; do not translate OpenAI model IDs or effort names into assumed equivalents. Record the intended profiles and any unverified availability in the handoff. If the required profile is unavailable, report the constraint rather than silently substituting a model or effort. Later explicit user choices override these defaults.
 
 Use the supplied brief. Otherwise select one only if exactly one `docs/agent/work/*/brief.md` is clearly active; else ask for its path. Read repository instructions, `docs/agent/work/README.md`, routed project context, the brief, and enough code to establish starting behavior. Reopen a settled product decision only when repository evidence contradicts it; record why.
 

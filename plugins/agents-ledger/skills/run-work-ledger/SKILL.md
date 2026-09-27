@@ -5,7 +5,9 @@ description: Execute a validated Beads work ledger with bounded context, owned w
 
 # Run work ledger
 
-Drive the active Beads goal to its `goal.md` acceptance oracle. Use GPT-6 Sol light for persistent coordination or GPT-6 Luna Max for deeper bounded work; workers use only these profiles; report unavailability.
+Drive the active Beads goal to its `goal.md` acceptance oracle. Keep the user's selected coordinator model and reasoning effort; any provider is supported, including Astra as coordinator.
+
+Follow the user's session model/provider choices for subagents. When using OpenAI subagents, use only GPT-6 Luna (`gpt-6-luna`) with `xhigh` reasoning, including writers, reviewers, and nested delegates. For other providers, use their configured models and supported reasoning controls; do not translate OpenAI model IDs or effort names into assumed equivalents. Verify the dispatch tool supports the required profile and select it explicitly; avoid inheritance that would give a worker the coordinator's model or effort. Pass this policy to any worker allowed to delegate. If the required profile cannot be selected, report the constraint and do not dispatch a substitute. Later explicit user choices override these defaults.
 
 Use the supplied goal directory. If omitted, select one only when exactly one non-terminal Beads goal is clear. Read repository instructions and `docs/agent/work/README.md`. Beads alone owns mutable state; reject `state.yaml` or another live tracker. Repair missing adapter/infrastructure before execution; never fall back to YAML.
 
