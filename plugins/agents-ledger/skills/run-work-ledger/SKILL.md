@@ -15,6 +15,8 @@ If a goal-local database is created or removed during execution, sync the VS Cod
 
 Call `ledger_ready`, then `ledger_task` for the selected issue. Supply the absolute Git worktree root as `workspaceRoot` and the relative goal directory as `goalDir` on every call. Use `ledger_document` for focused goal or workspace headings, lines, or character slices, and `ledger_validate_receipt` before accepting a worker receipt. The tools fail rather than truncate above 2 KiB ready/receipt, 8 KiB task, or 4 KiB excerpt. Never inject `bd prime`, raw issue JSON/history, full issue lists, documents, or directory dumps.
 
+When the user wants a visual status snapshot, call `ledger_status_page` and return its local HTML path. The bundled Bun command in the plugin README can keep that file current with `--watch`; agents do not author page files or start a web server.
+
 Inspect HEAD, dirty/staged state, dependencies, base SHAs, and path ownership. Do not overwrite unrelated changes or dispatch concurrent writers with overlapping paths. Use safe worktree isolation when the execution request permits it.
 
 Read and follow [execution protocol](references/execution-protocol.md) for claims, worker dispatch, Jev, receipts, integration, immutable review, recovery, commits, and acceptance.

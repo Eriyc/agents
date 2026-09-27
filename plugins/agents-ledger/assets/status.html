@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="5">
+  <title>Work Ledger board</title>
+  <style>
+    :root { color-scheme: light; --paper:#f3f5f1; --surface:#fff; --ink:#19312d; --muted:#5d7067; --line:#d7e2d9; }
+    * { box-sizing:border-box; }
+    html,body { width:100%; height:100%; margin:0; overflow:hidden; }
+    html { font-family:system-ui,"Segoe UI",sans-serif; color:var(--ink); background:var(--paper); }
+    .board { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) 38px; gap:7px; height:100dvh; padding:7px; }
+    .board.show-done { grid-template-columns:repeat(3,minmax(0,1fr)) minmax(180px,1fr); }
+    .lane { display:flex; flex-direction:column; min-width:0; min-height:0; background:#e8eee9; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .lane[data-state="open"] { background:#e9f3eb; }
+    .lane[data-state="active"] { background:#e9f0f8; }
+    .lane[data-state="blocked"] { background:#f5efe5; }
+    .lane[data-state="closed"] { background:#edf0eb; }
+    .lane-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 12px 9px; flex:none; }
+    .lane[data-state="closed"] .lane-head { padding:11px 4px; flex-direction:column; }
+    .lane[data-state="closed"] h2 { writing-mode:vertical-rl; }
+    .lane[data-state="closed"] .cards { display:none; }
+    .board.show-done .lane[data-state="closed"] .lane-head { padding:11px 12px 9px; flex-direction:row; }
+    .board.show-done .lane[data-state="closed"] h2 { writing-mode:initial; }
+    .board.show-done .lane[data-state="closed"] .cards { display:block; }
+    .toggle { border:0; background:none; color:inherit; font:inherit; font-weight:inherit; padding:0; cursor:pointer; }
+    .toggle:focus-visible { outline:2px solid #176a54; outline-offset:3px; }
+    h2 { margin:0; font-size:14px; font-weight:750; line-height:1.2; }
+    .count { display:inline-grid; place-items:center; flex:none; min-width:23px; height:23px; padding:0 6px; border-radius:999px; background:rgba(255,255,255,.8); color:#36554c; font-size:12px; font-weight:750; font-variant-numeric:tabular-nums; }
+    .cards { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:0 8px 8px; scrollbar-width:thin; }
+    .card { margin:0 0 7px; padding:10px 11px; border:1px solid #d7e0d7; border-radius:9px; background:var(--surface); box-shadow:0 1px 1px #1d39200a; }
+    .title { margin:0 0 8px; font-size:13px; font-weight:680; line-height:1.3; overflow-wrap:anywhere; }
+    .meta { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:3px 8px; font-size:10px; color:var(--muted); line-height:1.3; }
+    .id { color:#3b5149; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .badge { display:inline-block; margin-top:7px; padding:2px 5px; border-radius:4px; background:#e3f3e7; color:#176a54; font-size:10px; font-weight:700; }
+    .empty { margin:0; padding:11px; color:var(--muted); font-size:12px; }
+    @media (max-width:700px) { .board { grid-template-columns:repeat(3,minmax(0,1fr)) 32px; gap:5px; padding:5px; } .board.show-done { grid-template-columns:repeat(3,minmax(0,1fr)) minmax(135px,1fr); } .lane-head { padding:9px 8px 7px; } .cards { padding:0 5px 5px; } .card { padding:8px; } h2 { font-size:12px; } .title { font-size:12px; } }
+  </style>
+</head>
+<body>
+  <main class="board" aria-label="Work Ledger board">
+    <section class="lane" data-state="open" aria-labelledby="open-label"><div class="lane-head"><h2 id="open-label">Open</h2><span class="count" id="open-count">0</span></div><div class="cards" id="open-cards"></div></section>
+    <section class="lane" data-state="active" aria-labelledby="active-label"><div class="lane-head"><h2 id="active-label">In progress</h2><span class="count" id="active-count">0</span></div><div class="cards" id="active-cards"></div></section>
+    <section class="lane" data-state="blocked" aria-labelledby="blocked-label"><div class="lane-head"><h2 id="blocked-label">Blocked</h2><span class="count" id="blocked-count">0</span></div><div class="cards" id="blocked-cards"></div></section>
+    <section class="lane" data-state="closed" aria-labelledby="closed-label"><div class="lane-head"><h2 id="closed-label"><button id="done-toggle" class="toggle" type="button" aria-expanded="false" aria-controls="closed-cards">Done</button></h2><span class="count" id="closed-count">0</span></div><div class="cards" id="closed-cards"></div></section>
+  </main>
+  <!-- LEDGER_SNAPSHOT -->
+  <script>
+    const data = JSON.parse(document.getElementById("snapshot").textContent);
+    const ready = new Set(data.readyIds);
+    document.title = data.goal + " — Work Ledger";
+    const state = (issue) => issue.status === "in_progress" ? "active" : issue.status === "closed" ? "closed" : issue.status === "open" ? "open" : "blocked";
+    const time = (value) => {
+      const date = new Date(value || "");
+      return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(date);
+    };
+    for (const kind of ["open","active","blocked","closed"]) {
+      const host = document.getElementById(kind + "-cards");
+      const items = data.issues.filter((issue) => state(issue) === kind);
+      document.getElementById(kind + "-count").textContent = String(items.length);
+      for (const issue of items) {
+        const card = document.createElement("article");
+        card.className = "card";
+        const title = document.createElement("p");
+        title.className = "title";
+        title.textContent = issue.title;
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const id = document.createElement("span");
+        id.className = "id";
+        id.textContent = issue.id;
+        const assignee = document.createElement("span");
+        assignee.textContent = issue.assignee || "Unassigned";
+        meta.append(id,assignee);
+        card.append(title,meta);
+        if (kind === "open" && ready.has(issue.id)) {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = "Ready";
+          card.append(badge);
+        }
+        if (kind === "blocked" && issue.status !== "blocked") {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = issue.status;
+          card.append(badge);
+        }
+        card.title = "Updated " + time(issue.heartbeatAt || issue.updatedAt);
+        host.append(card);
+      }
+      if (!items.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No issues";
+        host.append(empty);
+      }
+      try { host.scrollTop = Number(sessionStorage.getItem("ledger-scroll-" + kind)) || 0; } catch {}
+    }
+    addEventListener("beforeunload", () => {
+      for (const kind of ["open","active","blocked","closed"]) {
+        try { sessionStorage.setItem("ledger-scroll-" + kind, String(document.getElementById(kind + "-cards").scrollTop)); } catch {}
+      }
+    });
+    const doneToggle = document.getElementById("done-toggle");
+    doneToggle.addEventListener("click", () => {
+      const expanded = document.querySelector(".board").classList.toggle("show-done");
+      doneToggle.setAttribute("aria-expanded", String(expanded));
+      try { sessionStorage.setItem("ledger-done-expanded", String(expanded)); } catch {}
+    });
+    try {
+      if (sessionStorage.getItem("ledger-done-expanded") === "true") {
+        document.querySelector(".board").classList.add("show-done");
+        doneToggle.setAttribute("aria-expanded", "true");
+      }
+    } catch {}
+  </script>
+</body>
+</html>

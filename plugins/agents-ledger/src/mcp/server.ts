@@ -6,6 +6,7 @@ import { runCommand, type RunCommand } from "../ledger/command.js";
 import { documentPacket, type DocumentRequest } from "../ledger/documents.js";
 import { route } from "../ledger/paths.js";
 import { validateReceipt } from "../ledger/receipt.js";
+import { writeStatusPage } from "../status/page.js";
 
 const location = { workspaceRoot: z.string().min(1), goalDir: z.string().min(1) };
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
@@ -18,7 +19,7 @@ function response(work: () => Promise<string>): Promise<{ content: Array<{ type:
 }
 
 export function createMcpServer(run: RunCommand = runCommand): McpServer {
-  const server = new McpServer({ name: "agents-ledger", version: "0.2.0" }, {
+  const server = new McpServer({ name: "agents-ledger", version: "0.3.0" }, {
     instructions: "Use explicit workspaceRoot and goalDir on every call. These tools read bounded Beads and document context; only the coordinator changes Beads with bd."
   });
 
@@ -74,6 +75,16 @@ export function createMcpServer(run: RunCommand = runCommand): McpServer {
     annotations: readOnly,
     inputSchema: z.object({ ...location, issueId: z.string().min(1), receiptPath: z.string().min(1) })
   }, (input) => response(async () => validateReceipt(await route(input.workspaceRoot, input.goalDir, run), run, input.issueId, input.receiptPath)));
+
+  server.registerTool("ledger_status_page", {
+    title: "Create a local Beads status page",
+    description: "Generate a standalone HTML snapshot from one goal in the system temporary directory. No port or web server. Run the bundled status-page.ts CLI with --watch to keep the file updated.",
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    inputSchema: z.object(location)
+  }, (input) => response(async () => {
+    const path = await writeStatusPage(input.workspaceRoot, input.goalDir, run);
+    return "Local status page: " + path + "\nSnapshot only. For automatic updates, run the plugin's scripts/status-page.ts with --watch.";
+  }));
 
   return server;
 }

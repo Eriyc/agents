@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "bun:test";
@@ -26,6 +26,7 @@ function fixture() {
     if (argv[0] === "git") return `${workspace}\n`;
     if (argv.includes("where")) return JSON.stringify({ path: beads });
     if (argv.includes("ready")) return JSON.stringify([issue]);
+    if (argv.includes("list")) return JSON.stringify([issue]);
     if (argv.includes("show")) return JSON.stringify([issue]);
     throw new Error(`unexpected command ${argv.join(" ")}`);
   };
@@ -50,12 +51,12 @@ function message(result: Awaited<ReturnType<Client["callTool"]>>): string {
 }
 
 describe("agents-ledger MCP", () => {
-  it("exposes four bounded read tools over MCP", async () => {
+  it("exposes bounded ledger tools over MCP", async () => {
     const f = fixture();
     const { client, close } = await connected(f.run);
     try {
       const tools = await client.listTools();
-      assert.deepEqual(tools.tools.map((tool) => tool.name), ["ledger_ready", "ledger_task", "ledger_document", "ledger_validate_receipt"]);
+      assert.deepEqual(tools.tools.map((tool) => tool.name), ["ledger_ready", "ledger_task", "ledger_document", "ledger_validate_receipt", "ledger_status_page"]);
       const ready = await client.callTool({ name: "ledger_ready", arguments: f.location });
       assert.equal(ready.isError, undefined);
       assert.match(message(ready), /demo-1 \| open \| Implement sample/);
@@ -71,6 +72,13 @@ describe("agents-ledger MCP", () => {
       writeFileSync(join(f.workspace, "receipt.yaml"), Bun.YAML.stringify({ task_id: "demo-1", status: "ready-for-coordinator", base_sha: "a".repeat(40), changed_paths: ["src/main.ts", "README.md"], checks: [{ command: "bun test", status: "passed", environment: "local", evidence: "tests passed" }], open_findings: [], next_action: "Review." }));
       const receipt = await client.callTool({ name: "ledger_validate_receipt", arguments: { ...f.location, issueId: "demo-1", receiptPath: "receipt.yaml" } });
       assert.match(message(receipt), /Worker receipt valid/);
+      const page = await client.callTool({ name: "ledger_status_page", arguments: f.location });
+      assert.equal(page.isError, undefined);
+      const match = message(page).match(/Local status page: (.+\.html)/);
+      assert.ok(match?.[1]);
+      assert.equal(existsSync(match[1]), true);
+      assert.match(readFileSync(match[1], "utf8"), /Implement sample/);
+      unlinkSync(match[1]);
     } finally { await close(); }
   });
 
@@ -169,7 +177,7 @@ describe("agents-ledger MCP", () => {
     const client = new Client({ name: "stdio-test", version: "1.0.0" });
     await client.connect(transport);
     try {
-      assert.equal((await client.listTools()).tools.length, 4);
+      assert.equal((await client.listTools()).tools.length, 5);
       const result = await client.callTool({ name: "ledger_ready", arguments: f.location });
       assert.equal(result.isError, true);
       assert.match(message(result), /cannot start bd|missing-bd|ENOENT/);
