@@ -9,6 +9,8 @@ Drive the active Beads goal to its `goal.md` acceptance oracle. Use GPT-6 Sol li
 
 Use the supplied goal directory. If omitted, select one only when exactly one non-terminal Beads goal is clear. Read repository instructions and `docs/agent/work/README.md`. Beads alone owns mutable state; reject `state.yaml` or another live tracker. Repair missing adapter/infrastructure before execution; never fall back to YAML.
 
+If a goal-local database is created or removed during execution, sync the VS Code workspace `beads.projects` setting as described in `plan-work-ledger`; the coordinator owns this shared configuration.
+
 Use the bounded adapter: `devenv shell -- bun scripts/agent-context/beads.ts <goal-directory> ready`, then `devenv shell -- bun scripts/agent-context/beads.ts <goal-directory> task <issue-id>`. Retrieve only needed sections via `headings`, `read`, `slice`, or `repo-` variants. Fail rather than truncate above 2 KiB ready/receipt, 8 KiB task, or 4 KiB excerpt. Never inject `bd prime`, raw issue JSON/history, full issue lists, documents, or directory dumps.
 
 Inspect HEAD, dirty/staged state, dependencies, base SHAs, and path ownership. Do not overwrite unrelated changes or dispatch concurrent writers with overlapping paths. Use safe worktree isolation when the execution request permits it.

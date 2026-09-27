@@ -4,9 +4,11 @@
 
 Before claiming, verify dependencies, base SHA, frozen contracts, check prerequisites, non-overlapping `metadata.writable_paths`, and no conflicting staged/unowned changes. Claim only the selected issue: `bd update <id> --claim`.
 
+Preflight each issue against the goal oracle: observable behavior, exact design/source baseline, owned paths, failure cases, focused checks, and external prerequisites. For a consequential shared contract or migration, obtain a short writer approach and one focused probe before dependent work. Resolve a concrete gap in the issue once; do not create a separate plan-review stage or repeatedly reapprove an unchanged plan.
+
 Dispatch one ≤8 KiB packet with purpose, base SHA, owned/forbidden paths, behavior, checks, exact line-addressed references, stop conditions, and ≤2 KiB receipt contract. Workers must not mutate Beads/ledger docs, stage, commit, reset, or edit other paths; stop on contract/ownership ambiguity and claim only produced evidence.
 
-For nontrivial coding issues, include the installed Jev Review skill. After a coherent validated slice, the owning writer runs `jev_review`, diagnoses concrete issues, fixes justified ones, and rescores changed code with the prior structured response unchanged as `previousEvaluation`. Keep task/diff/context comparable; stop when no justified improvement remains. Exclude secrets/unrelated files. If Jev is unavailable, report it and proceed with focused checks.
+For nontrivial coding issues, include the installed Jev Review skill. After a coherent validated slice, the owning writer runs one `jev_review`, diagnoses concrete issues against acceptance, fixes justified ones, and rescores once with the prior structured response unchanged as `previousEvaluation`. Keep task/diff/context comparable. A score change alone does not trigger more editing; unresolved concrete defects remain open. Exclude secrets/unrelated files. If Jev is unavailable, report it and proceed with focused checks.
 
 ## Receipt and evidence
 
@@ -16,9 +18,9 @@ Map each criterion/target to the smallest representative check. Verify actual co
 
 ## Integration and review
 
-Coordinator checks path ownership, diff, and focused evidence; stages exact paths, commits the candidate, and updates Beads. For substantive coordinator-owned corrections, use the writer Jev loop before a new candidate. When independently scored slices create consequential interface/shared-seam risk, run one `jev_review` on the focused integrated diff after checks, with goal and relevant contracts. Skip unchanged independent slices and ledger-only edits. Fix justified findings, rerun affected checks, and rescore the changed candidate with unchanged `previousEvaluation`.
+Coordinator checks path ownership, diff, and focused evidence; stages exact paths, commits the candidate, and updates Beads. For substantive coordinator-owned corrections, use the writer Jev rule before a new candidate. When independently scored slices create consequential interface/shared-seam risk, run one `jev_review` on the focused integrated diff after checks, with goal and relevant contracts. Skip unchanged independent slices and ledger-only edits. Fix justified findings, rerun affected checks, and rescore once with unchanged `previousEvaluation`.
 
-Jev is feedback, not an acceptance gate or independent review. Do not add routine reviewers for issues the owner can fix. Keep goal-required independent review on an immutable integrated candidate or separately justified high-risk question. Read-only review names base/candidate SHAs and one question; findings specify severity, file/line, violated criterion, consequence, smallest fix. Reproduce valid findings, dispatch bounded correction, then review only correction and affected behavior unless impact requires more.
+Jev is feedback, not an acceptance gate or independent review. Do not add routine reviewers for issues the owner can fix. Keep goal-required independent review on an immutable integrated candidate or separately justified high-risk question. Read-only review names base/candidate SHAs and one question; findings specify severity, file/line, violated criterion, consequence, smallest fix. Optional polish does not block acceptance. Reproduce valid findings, dispatch bounded correction, then review only correction and affected behavior unless new evidence expands impact. After two correction rounds on a slice, coordinator diagnoses the cause and splits or replans the work, or records a genuine blocker in Beads. The round limit never waives a required criterion, failed check, or demonstrated defect.
 
 ## History, recovery, acceptance
 
