@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "goal-assistance-offline-example",
+  "generator": {
+    "provider": "codex",
+    "model": "fake-codex-model-v1"
+  },
+  "judge": {
+    "provider": "openrouter",
+    "model": "fake-openrouter-jev-model-v1"
+  },
+  "prompts": {
+    "normal_codex": "Fake-only baseline. Replace with the frozen normal Codex prompt before any live run.",
+    "workflow": "Fake-only goal workflow. Replace with the same frozen workflow text for workflow-only and workflow-plus-Jev before any live run."
+  },
+  "sharedContext": "The supplied synthetic case is the complete context available to every condition.",
+  "toolAccess": ["no_external_tools"],
+  "selection": {
+    "development": [
+      "dev-01", "dev-02", "dev-03", "dev-04", "dev-05", "dev-06", "dev-07", "dev-08", "dev-09", "dev-10",
+      "dev-11", "dev-12", "dev-13", "dev-14", "dev-15", "dev-16", "dev-17", "dev-18", "dev-19", "dev-20",
+      "dev-21", "dev-22", "dev-23", "dev-24", "dev-25", "dev-26", "dev-27", "dev-28", "dev-29", "dev-30"
+    ],
+    "holdout": [
+      "hold-01", "hold-02", "hold-03", "hold-04", "hold-05", "hold-06", "hold-07", "hold-08", "hold-09", "hold-10",
+      "hold-11", "hold-12", "hold-13", "hold-14", "hold-15", "hold-16", "hold-17", "hold-18", "hold-19", "hold-20",
+      "hold-21", "hold-22", "hold-23", "hold-24", "hold-25", "hold-26", "hold-27", "hold-28", "hold-29", "hold-30"
+    ]
+  },
+  "selectionRule": "first-N-by-case-id-within-each-split",
+  "generationBudget": {
+    "maxInputTokens": 6000,
+    "maxOutputTokens": 700,
+    "timeoutMs": 30000
+  },
+  "limits": {
+    "maxRemoteRequests": 300,
+    "maxCostUsd": 5,
+    "wallClockStopMs": 600000
+  }
+}
