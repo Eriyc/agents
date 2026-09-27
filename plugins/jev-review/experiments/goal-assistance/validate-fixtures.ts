@@ -78,9 +78,16 @@ async function loadSplit(split: "development" | "holdout") {
 
 const development = await loadSplit("development");
 const holdout = await loadSplit("holdout");
-const developmentIds = new Set(development.cases.map((item) => item.case_id));
-const overlap = holdout.cases.filter((item) => developmentIds.has(item.case_id));
-if (overlap.length) throw new Error(`case IDs overlap across splits: ${overlap.map((item) => item.case_id).join(", ")}`);
+const pairSchema = z.strictObject({ development: splitSchema, holdout: splitSchema }).superRefine((splits, context) => {
+  const developmentIds = new Set(splits.development.map((item) => item.case_id));
+  for (const [index, item] of splits.holdout.entries()) {
+    if (developmentIds.has(item.case_id)) {
+      context.addIssue({ code: "custom", path: ["holdout", index, "case_id"], message: "case ID overlaps development" });
+    }
+  }
+});
+const paired = pairSchema.safeParse({ development: development.cases, holdout: holdout.cases });
+if (!paired.success) throw new Error(`paired split: ${z.prettifyError(paired.error)}`);
 
 console.log(JSON.stringify({
   schema: "goal-assistance-fixtures-v1",
