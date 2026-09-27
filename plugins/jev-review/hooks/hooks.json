@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${PLUGIN_ROOT}/dist/goal/hook-entry.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

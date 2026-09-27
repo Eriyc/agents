@@ -8,7 +8,7 @@
     "bun": ">=1.4.0"
   },
   "scripts": {
-    "build": "bun build ./src/server.ts --target=bun --outdir=dist --minify",
+    "build": "bun build ./src/server.ts ./src/goal/hook-entry.ts --target=bun --outdir=dist --minify",
     "check": "tsc --noEmit",
     "test": "bun test",
     "validate": "bun run check && bun run build && bun test"

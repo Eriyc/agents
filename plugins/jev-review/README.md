@@ -19,7 +19,7 @@ Jev Review runs as a local MCP server and gives Claude Code, Codex, Cursor, and 
 > This is a fork of [NiazMorshed2007/jev-review](https://github.com/NiazMorshed2007/jev-review). It runs Jev through OpenRouter and uses Bun for the MCP server and development workflow.
 
 > [!IMPORTANT]
-> **Your API key stays on your machine.** Jev Review has no hosted backend, database, telemetry service, or author-operated proxy. The only remote request is sent directly to the configured Jev API.
+> **Your API key stays on your machine.** Jev Review has no hosted backend, telemetry service, or author-operated proxy. Enabled evaluations are sent to OpenRouter; goal-assistance state and optional diagnostics stay under the local plugin data directory.
 
 ## Demo
 
@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/0ff9f873-0652-4826-af3d-6bb4f42c70b1
 | **Distribution** | The Agents plugin marketplace—no npm publication |
 | **Runtime** | Local Bun process over MCP stdio |
 | **Remote access** | OpenRouter Decisions API using your OpenRouter key |
-| **MCP tools** | `jev_review` for iterative quality scores; `jev_signal` for a one-off file judgment |
+| **MCP tools** | `jev_review`, `jev_signal`, `jev_evaluate`, and `jev_goal_state_update` |
 | **Code changes** | Always performed by the primary coding agent |
 
 ## Quick start
@@ -59,7 +59,7 @@ codex plugin marketplace add ./agents
 codex plugin add jev-review@agents
 ```
 
-Bun and `OPENROUTER_API_KEY` are required. The committed server bundle needs no build. Codex resolves `${PLUGIN_ROOT}/dist/server.js` to the installed plugin directory and passes `OPENROUTER_API_KEY` to the MCP process. Use the plugin installation rather than adding a separate `[mcp_servers.jev-review]` entry to `~/.codex/config.toml`; a manual entry needs its own concrete path and can override the plugin server. Restart Codex after changing its environment. To update, run `codex plugin marketplace upgrade agents` and reinstall with `codex plugin add jev-review@agents`. Start a new Codex task to load the updated tools.
+Bun and `OPENROUTER_API_KEY` are required for remote evaluation. The committed server and goal-hook bundles need no build. Codex resolves `${PLUGIN_ROOT}` to the installed plugin directory. Make the key available to the Codex host process before starting it; the hook runs in a separate process from the MCP server. Use the plugin installation rather than adding a separate `[mcp_servers.jev-review]` entry to `~/.codex/config.toml`; a manual entry needs its own concrete path and can override the plugin server. Restart Codex after changing its environment. To update, run `codex plugin marketplace upgrade agents` and reinstall with `codex plugin add jev-review@agents`. Start a new Codex task to load the updated tools.
 
 To develop the plugin, install dependencies and build with Bun:
 
@@ -75,7 +75,7 @@ Set the OpenRouter key before starting your coding agent:
 export OPENROUTER_API_KEY="your-openrouter-key"
 ```
 
-`JEV_MODEL` is optional: the default is `~typesafe/jev-latest`, and you can pin `typesafe/jev-1.13`.
+`JEV_MODEL` is optional: the OpenRouter default is `~typesafe/jev-latest`. Model availability and pricing are controlled by OpenRouter.
 
 ```text
 OpenRouter: Codex → local Bun MCP → OpenRouter → Jev provider
@@ -161,7 +161,7 @@ Point OpenCode at the same Bun bundle in `~/.config/opencode/opencode.json`:
 Run `opencode mcp list` to verify the connection.
 ## MCP tools
 
-Jev Review exposes two tools. `jev_review` remains the iterative software-quality scorer:
+Jev Review exposes four tools. `jev_review` remains the iterative software-quality scorer:
 
 ```ts
 {
@@ -202,6 +202,28 @@ Use `jev_signal` for a specific yes/no judgment about a file. The agent supplies
 ```
 
 The response has `path`, `model`, `evidenceProbability`, and `probabilityYes`. `probabilityYes` is Jev's probability of yes, **not** a confidence score or an automatic pass/fail decision. When Jev finds the supplied evidence insufficient (`evidenceProbability < 0.5`), `probabilityYes` is `null`; provide more context before acting. For file-by-file use, the agent calls `jev_signal` once per relevant file. Exclude secrets, generated files, and vendored code. Enforce mechanical repository rules with tests or linters; use Jev for semantic judgments.
+
+### General typed evaluation and goal state
+
+`jev_evaluate` accepts bounded JSON `state` and named typed `questions` (`choice`, `score`, or `noul`). It returns the validated native Jev answers, model, and available usage metadata. It sends only the state and questions provided in the call through OpenRouter; it does not read local files. Model answers are evidence and cannot grant permission or change the user's scope.
+
+`jev_goal_state_update` records a goal update after the agent handles a user turn. Supply `identity: { sessionId, workspaceId }`, `expectedRevision`, `eventId`, and `sourceTurnId`, plus the goal, constraints, pending question, or assessment status to change. Omitted fields retain their values; `null` clears a nullable field. Stale revisions return `stale`, duplicate event IDs return `duplicate`, and corrupt state returns `corrupt`. State is versioned and scoped to one session and workspace under `PLUGIN_DATA/goal-assistance`; it is never a workspace-global goal.
+
+## Goal assistance in Codex
+
+The `goal-assistance` skill is available for manual use. Its workflow gathers relevant context, drafts a bounded candidate goal, checks it with `jev_evaluate` when useful, and asks about material unresolved choices. Codex writes the prose and makes the final decision; Jev scores and choices do not explain themselves or create user authority.
+
+The packaged `UserPromptSubmit` command hook performs a short initial triage. Set `JEV_GOAL_MODE` in the **Codex host environment**:
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | No triage or hook guidance. |
+| `observe` | Default. No task guidance; triage only when local diagnostics are explicitly enabled. |
+| `assist` | Bounded triage can add fixed workflow guidance and labeled data to the submitted turn. |
+
+Set `JEV_GOAL_DIAGNOSTICS=1` for local redacted metadata records. Set `JEV_GOAL_DIAGNOSTICS_CONTENT=1` as well to opt into redacted prompt content in those records. Delete `PLUGIN_DATA/goal-assistance` to erase saved goal state and diagnostics. There is no silent preference learning. Assistance may send the submitted prompt text and bounded saved goal state to OpenRouter after secret filtering; it never automatically sends attachments, transcript contents, or repository files. Review sensitive prompts before enabling `assist` or diagnostics content.
+
+The hook has a five-second triage deadline and a bounded input size. Timeout, unavailable credentials, invalid output, or unreadable state produces a short fallback notice in assist mode so Codex can ask for clarification. Unknown host goal-mode metadata is not treated as a request to alter native goal mode. Codex requires review and trust for a plugin hook definition before it will run; after a hook definition changes, review it again. Host invocation and trust should be verified in the installed Codex version; unit tests alone do not establish that behavior. Other clients can use the manual skill and MCP tools where supported.
 
 ## Quality dimensions
 
@@ -257,16 +279,18 @@ jev-review/
 │   └── plugin.json              # Claude Code adapter
 ├── .codex-plugin/
 │   └── plugin.json              # Codex metadata
+├── hooks/hooks.json             # Codex UserPromptSubmit command hook
 ├── skills/
-│   └── jev-review/
-│       └── SKILL.md             # Agent review workflow
+│   ├── jev-review/SKILL.md      # Agent review workflow
+│   └── goal-assistance/SKILL.md # Manual goal workflow
 ├── src/
 │   ├── config/                  # Environment handling
 │   ├── evaluation/              # Metrics, scoring, and comparisons
 │   ├── jev/                     # Direct Jev client and validation
 │   └── mcp/                     # MCP tool boundary
 ├── dist/
-│   └── server.js                # Committed standalone server bundle
+│   ├── server.js                # Committed standalone MCP bundle
+│   └── goal/hook-entry.js       # Committed standalone Bun hook
 ├── public/
 │   └── jev-review-demo.mp4      # Product demonstration
 └── test/                        # Unit and MCP protocol tests
@@ -292,13 +316,13 @@ bun run build
 claude plugin validate . --strict
 ```
 
-`bun run build` creates the committed `dist/server.js` bundle. The validation script checks types, builds the bundle, then runs Bun tests. Unit and MCP protocol tests use local fakes and do not consume Jev API quota; a live Jev call requires the OpenRouter key. Node.js and npm are not required for this workflow.
+`bun run build` creates the committed `dist/server.js` and `dist/goal/hook-entry.js` bundles. The validation script checks types, builds both bundles, then runs Bun tests. Unit and MCP protocol tests use local fakes and do not consume Jev API quota; a live Jev call requires the OpenRouter key. Node.js and npm are not required for this workflow.
 
 ## Security and privacy
 
 The local MCP process reads `OPENROUTER_API_KEY` and uses it only in the TLS Authorization header sent to OpenRouter. Jev Review never stores or logs the key.
 
-Only context explicitly supplied to `jev_review` or `jev_signal` is sent to Jev. `previousEvaluation` is compared locally and is not included in the current code context. No repository files are discovered or uploaded automatically.
+Only context explicitly supplied to `jev_review`, `jev_signal`, or `jev_evaluate` is sent to OpenRouter by the MCP server. `previousEvaluation` is compared locally and is not included in the current code context. In assist mode, the Codex hook can send the submitted prompt and bounded saved state after secret filtering. No repository files, attachments, or transcript content are discovered or uploaded automatically.
 
 Review context leaves your machine for OpenRouter's Decisions API. Do not supply secrets or unrelated proprietary content, and review OpenRouter's privacy terms. Jev Review complements rather than replaces dedicated security tooling.
 
