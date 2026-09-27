@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="5">
   <title>Work Ledger board</title>
   <style>
     :root { color-scheme: light; --paper:#f3f5f1; --surface:#fff; --ink:#19312d; --muted:#5d7067; --line:#d7e2d9; }
@@ -35,6 +34,11 @@
     .id { color:#3b5149; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
     .badge { display:inline-block; margin-top:7px; padding:2px 5px; border-radius:4px; background:#e3f3e7; color:#176a54; font-size:10px; font-weight:700; }
     .empty { margin:0; padding:11px; color:var(--muted); font-size:12px; }
+    .change-notice { position:fixed; right:16px; bottom:16px; z-index:2; padding:7px 11px; border:1px solid #b6d7bf; border-radius:8px; background:#f4fff5; color:#176a54; box-shadow:0 2px 8px #1d392020; font-size:12px; font-weight:700; }
+    .change-notice[hidden] { display:none; }
+    .card.changed { animation:changed 16s ease-out; }
+    @keyframes changed { 0%,70% { border-color:#51ab71; background:#edfff0; } 100% { border-color:#d7e0d7; background:var(--surface); } }
+    @media (prefers-reduced-motion:reduce) { .card.changed { animation:none; border-color:#51ab71; background:#edfff0; } }
     @media (max-width:700px) { .board { grid-template-columns:repeat(3,minmax(0,1fr)) 32px; gap:5px; padding:5px; } .board.show-done { grid-template-columns:repeat(3,minmax(0,1fr)) minmax(135px,1fr); } .lane-head { padding:9px 8px 7px; } .cards { padding:0 5px 5px; } .card { padding:8px; } h2 { font-size:12px; } .title { font-size:12px; } }
   </style>
 </head>
@@ -45,23 +49,33 @@
     <section class="lane" data-state="blocked" aria-labelledby="blocked-label"><div class="lane-head"><h2 id="blocked-label">Blocked</h2><span class="count" id="blocked-count">0</span></div><div class="cards" id="blocked-cards"></div></section>
     <section class="lane" data-state="closed" aria-labelledby="closed-label"><div class="lane-head"><h2 id="closed-label"><button id="done-toggle" class="toggle" type="button" aria-expanded="false" aria-controls="closed-cards">Done</button></h2><span class="count" id="closed-count">0</span></div><div class="cards" id="closed-cards"></div></section>
   </main>
+  <div id="change-notice" class="change-notice" role="status" aria-live="polite" hidden></div>
   <!-- LEDGER_SNAPSHOT -->
   <script>
-    const data = JSON.parse(document.getElementById("snapshot").textContent);
-    const ready = new Set(data.readyIds);
+    let data = JSON.parse(document.getElementById("snapshot").textContent);
+    if (new URLSearchParams(location.search).has("ledger-snapshot")) {
+      parent.postMessage({ type:"ledger-snapshot", data }, "*");
+    } else {
     document.title = data.goal + " — Work Ledger";
     const state = (issue) => issue.status === "in_progress" ? "active" : issue.status === "closed" ? "closed" : issue.status === "open" ? "open" : "blocked";
     const time = (value) => {
       const date = new Date(value || "");
       return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(date);
     };
-    for (const kind of ["open","active","blocked","closed"]) {
+    const kinds = ["open","active","blocked","closed"];
+    const issueSignature = (issue, ready) => JSON.stringify([issue.title,issue.status,issue.assignee,issue.parent,issue.updatedAt,ready.has(issue.id)]);
+    function render(changed = new Set()) {
+    const ready = new Set(data.readyIds);
+    for (const kind of kinds) {
       const host = document.getElementById(kind + "-cards");
+      const scrollTop = host.scrollTop;
+      host.replaceChildren();
       const items = data.issues.filter((issue) => state(issue) === kind);
       document.getElementById(kind + "-count").textContent = String(items.length);
       for (const issue of items) {
         const card = document.createElement("article");
         card.className = "card";
+        if (changed.has(issue.id)) card.classList.add("changed");
         const title = document.createElement("p");
         title.className = "title";
         title.textContent = issue.title;
@@ -95,10 +109,15 @@
         empty.textContent = "No issues";
         host.append(empty);
       }
-      try { host.scrollTop = Number(sessionStorage.getItem("ledger-scroll-" + kind)) || 0; } catch {}
+      host.scrollTop = scrollTop;
+    }
+    }
+    render();
+    for (const kind of kinds) {
+      try { document.getElementById(kind + "-cards").scrollTop = Number(sessionStorage.getItem("ledger-scroll-" + kind)) || 0; } catch {}
     }
     addEventListener("beforeunload", () => {
-      for (const kind of ["open","active","blocked","closed"]) {
+      for (const kind of kinds) {
         try { sessionStorage.setItem("ledger-scroll-" + kind, String(document.getElementById(kind + "-cards").scrollTop)); } catch {}
       }
     });
@@ -114,6 +133,37 @@
         doneToggle.setAttribute("aria-expanded", "true");
       }
     } catch {}
+    const notice = document.getElementById("change-notice");
+    const reader = document.createElement("iframe");
+    reader.hidden = true;
+    reader.setAttribute("aria-hidden", "true");
+    document.body.append(reader);
+    let noticeTimer;
+    addEventListener("message", (event) => {
+      if (event.source !== reader.contentWindow || event.data?.type !== "ledger-snapshot") return;
+      const next = event.data.data;
+      if (next?.schemaVersion !== 1 || !Array.isArray(next.issues) || !Array.isArray(next.readyIds)) return;
+      const previousReady = new Set(data.readyIds);
+      const nextReady = new Set(next.readyIds);
+      const previous = new Map(data.issues.map((issue) => [issue.id, issueSignature(issue, previousReady)]));
+      const changed = new Set(next.issues.filter((issue) => previous.get(issue.id) !== issueSignature(issue, nextReady)).map((issue) => issue.id));
+      const removed = data.issues.filter((issue) => !next.issues.some((current) => current.id === issue.id)).length;
+      data = next;
+      if (!changed.size && !removed) return;
+      document.title = data.goal + " — Work Ledger";
+      render(changed);
+      notice.textContent = [changed.size && changed.size + " new or updated", removed && removed + " removed"].filter(Boolean).join(" · ");
+      notice.hidden = false;
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => { notice.hidden = true; }, 16000);
+    });
+    const refresh = () => {
+      const url = new URL(location.href);
+      url.searchParams.set("ledger-snapshot", String(Date.now()));
+      reader.src = url.href;
+    };
+    setInterval(refresh, 5000);
+    }
   </script>
 </body>
 </html>

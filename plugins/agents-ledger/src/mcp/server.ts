@@ -24,7 +24,7 @@ function response(work: () => Promise<string>): Promise<{ content: Array<{ type:
 }
 
 export function createMcpServer(run: RunCommand = runCommand): McpServer {
-  const server = new McpServer({ name: "agents-ledger", version: "0.4.0" }, {
+  const server = new McpServer({ name: "agents-ledger", version: "0.4.1" }, {
     instructions: "Use explicit workspaceRoot and goalDir on every call. Route all Beads initialization, issue creation, dependencies, notes, and status transitions through these MCP tools. Only the coordinator calls mutation tools. Initialization creates the local HTML board; later MCP calls refresh it."
   });
 
