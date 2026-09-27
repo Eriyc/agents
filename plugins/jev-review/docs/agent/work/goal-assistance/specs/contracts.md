@@ -6,7 +6,7 @@ Frozen boundaries for independent implementation owners.
 
 - Put reusable Choice, Score, and Noul question types at the provider boundary; review-specific question construction stays a consumer.
 - General evaluation accepts bounded JSON-compatible state and typed questions. Return validated native answers, model identity, and available usage metadata. Do not wrap prompts as fake files or reinterpret Jev probabilities as universal confidence.
-- Expose the capability in the existing MCP server as working name `jev_evaluate`. Reuse current credentials/provider selection; preserve `jev_review`, `jev_signal`, TypeSafe, and OpenRouter behavior.
+- Expose the capability in the existing MCP server as working name `jev_evaluate`. Reuse the current OpenRouter credentials and provider selection; preserve `jev_review` and `jev_signal` behavior. Direct TypeSafe provider support is out of scope.
 
 ## Goal judgment and routing
 
@@ -25,4 +25,4 @@ Frozen boundaries for independent implementation owners.
 
 ## Host and package acceptance
 
-Use the supported native hook schema and dedicated bundled Bun entrypoint. Verify placement, trust/install behavior, invocation, output handling, and goal-mode metadata on the installed Windows host. Mock/MCP tests do not prove host acceptance. Preserve current manifests, providers, and tools; hook failure must leave a path for clarification.
+Use the supported native hook schema and dedicated bundled Bun entrypoint. Verify placement, trust/install behavior, invocation, output handling, and goal-mode metadata on the installed Windows host. Mock/MCP tests do not prove host acceptance. Preserve current manifests, OpenRouter integration, and tools; hook failure must leave a path for clarification.

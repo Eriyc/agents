@@ -13,8 +13,9 @@
 - `src/evaluation/questions.ts`: already defines Choice, Score and Noul request
   types, but couples them to review metric construction.
 - `src/jev/schema.ts`: validates all three native answer types.
-- `src/jev/provider.ts`, `src/config/environment.ts`: direct TypeSafe and OpenRouter
-  routing, environment overrides and PLUGIN_DATA credential persistence.
+- `src/jev/provider.ts`, `src/config/environment.ts`: current checkout routes
+  through OpenRouter using environment credentials and optional model override.
+  Direct TypeSafe provider support was excluded by user choice on 2026-09-27.
 - `skills/jev-review/SKILL.md`: current skill concerns code-quality review after
   implementation and one-off file judgments; goal assistance needs a distinct flow.
 - `package.json`, `mcp.json`, `.mcp.json`, `plugin.json`, `test/package.test.ts`:

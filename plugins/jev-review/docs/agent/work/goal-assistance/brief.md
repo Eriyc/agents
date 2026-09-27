@@ -33,7 +33,8 @@ them; document a consequential change rather than silently widening scope.
 - Codex drafts goals and asks questions; a replaceable judge supplies bounded
   classifications and independent assessments; deterministic policy routes them.
 - Expose general Jev Choice, Noul, and Score evaluation through the existing MCP.
-  Preserve `jev_review`, `jev_signal`, TypeSafe and OpenRouter compatibility.
+  Preserve `jev_review` and `jev_signal` through OpenRouter; direct TypeSafe
+  provider support is outside this goal by explicit user choice.
 - Ship off, observe, and assist settings; initial default is observe. Assist is
   available explicitly and performs the requested clarification workflow.
 - Goal inference never itself authorizes formal goal mode or implementation.

@@ -63,4 +63,4 @@ attachments, full transcripts or repository files. Document that enabled remote
 triage sends submitted prompt text; filter secrets and use only bounded relevant
 context. Diagnostics default to metadata, redact content, and offer explicit
 content-recording opt-in and deletion. User tuning is explicit, not silent
-learning. Preserve Bun packaging, current MCP tools, and both existing providers.
+learning. Preserve Bun packaging, current MCP tools, and the OpenRouter provider.
