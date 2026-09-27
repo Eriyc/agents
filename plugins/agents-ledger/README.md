@@ -8,8 +8,12 @@ needs no dependency installation.
 The plugin's `mcp.json` starts `bun ${PLUGIN_ROOT}/dist/server.js`. Each MCP
 call supplies an absolute `workspaceRoot` and a `goalDir` relative to it. The
 server verifies that the goal has its own `.beads` database before returning
-any issue data. Set `BEADS_PATH` in the MCP server environment if `bd` is not
-on its PATH.
+any issue data. It uses `BEADS_PATH` from the MCP server environment when set.
+On Windows it otherwise checks `bd.exe` on the MCP process's PATH, then installed
+Beads versions in the current user's mise data directory (`MISE_DATA_DIR` or
+`%LOCALAPPDATA%\\mise`). This uses the installed binary directly because a mise
+shim can itself require `mise` on PATH. Installations elsewhere can use
+`BEADS_PATH`; executable selection is never a tool argument.
 
 | Tool | Purpose |
 | --- | --- |

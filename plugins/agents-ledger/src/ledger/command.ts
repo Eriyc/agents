@@ -1,8 +1,40 @@
+import { existsSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { win32 } from "node:path";
+
 export type RunCommand = (argv: string[], cwd: string) => Promise<string>;
 
 const MAX_OUTPUT = 1024 * 1024;
 const TIMEOUT_MS = 10_000;
 const MUTATION_TIMEOUT_MS = 60_000;
+
+export function resolveBeadsExecutable(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.BEADS_PATH) return env.BEADS_PATH;
+  if (process.platform !== "win32") return "bd";
+
+  // Bun only searches the MCP process's PATH. Codex may omit mise's paths even
+  // when bd works in an interactive shell.
+  for (const entry of (env.PATH || env.Path || "").split(";")) {
+    const directory = entry.trim().replace(/^"(.*)"$/, "$1");
+    if (directory && existsSync(win32.join(directory, "bd.exe")))
+      return win32.join(directory, "bd.exe");
+  }
+  const localAppData = env.LOCALAPPDATA || win32.join(homedir(), "AppData", "Local");
+  const miseData = env.MISE_DATA_DIR || win32.join(localAppData, "mise");
+  for (const tool of ["github-gastownhall-beads", "beads"]) {
+    const installs = win32.join(miseData, "installs", tool);
+    if (!existsSync(installs)) continue;
+    const versions = readdirSync(installs, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+    for (const version of versions) {
+      const executable = win32.join(installs, version, "bd.exe");
+      if (existsSync(executable)) return executable;
+    }
+  }
+  return "bd";
+}
 
 async function readCapped(stream: ReadableStream<Uint8Array>, cap: number): Promise<string> {
   const reader = stream.getReader();
@@ -25,7 +57,7 @@ async function readCapped(stream: ReadableStream<Uint8Array>, cap: number): Prom
 export const runCommand: RunCommand = async (argv, cwd) => {
   const command = argv[0];
   if (!command) throw new Error("empty command");
-  const executable = command === "bd" ? (process.env.BEADS_PATH || "bd") : command;
+  const executable = command === "bd" ? resolveBeadsExecutable() : command;
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn([executable, ...argv.slice(1)], { cwd, stdout: "pipe", stderr: "pipe", stdin: "ignore" });

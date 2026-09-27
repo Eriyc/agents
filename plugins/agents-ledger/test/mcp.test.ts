@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createMcpServer } from "../src/mcp/server.js";
+import { resolveBeadsExecutable } from "../src/ledger/command.js";
 import type { RunCommand } from "../src/ledger/command.js";
 
 const folders: string[] = [];
@@ -52,6 +53,17 @@ function message(result: Awaited<ReturnType<Client["callTool"]>>): string {
 }
 
 describe("agents-ledger MCP", () => {
+  if (process.platform === "win32") it("finds an installed mise bd when MCP PATH omits mise", () => {
+    const root = mkdtempSync(join(tmpdir(), "ledger-mise-"));
+    folders.push(root);
+    const installed = join(root, "installs", "github-gastownhall-beads", "1.3.0", "bd.exe");
+    mkdirSync(join(root, "installs", "github-gastownhall-beads", "1.3.0"), { recursive: true });
+    writeFileSync(installed, "");
+    const env = { PATH: "C:\\Windows\\System32", MISE_DATA_DIR: root };
+    assert.equal(resolveBeadsExecutable(env), installed);
+    assert.equal(resolveBeadsExecutable({ ...env, BEADS_PATH: "C:\\custom\\bd.exe" }), "C:\\custom\\bd.exe");
+  });
+
   it("exposes bounded ledger tools over MCP", async () => {
     const f = fixture();
     const { client, close } = await connected(f.run);

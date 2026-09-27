@@ -59,7 +59,7 @@ codex plugin marketplace add ./agents
 codex plugin add jev-review@agents
 ```
 
-Bun and `OPENROUTER_API_KEY` are required. The committed server bundle needs no build. The plugin's `mcp.json` uses `${PLUGIN_ROOT}` so Codex resolves the installed bundle automatically. The MCP process must receive `OPENROUTER_API_KEY` from Codex's environment. The Codex compatibility MCP file requests passthrough with `env_vars`, but the portable Agent Plugins format has no passthrough field and does not guarantee ambient variables. Restart Codex after changing its environment. To update, run `codex plugin marketplace upgrade agents` and reinstall with `codex plugin add jev-review@agents`. Start a new Codex task to load the updated tools.
+Bun and `OPENROUTER_API_KEY` are required. The committed server bundle needs no build. Codex resolves `${PLUGIN_ROOT}/dist/server.js` to the installed plugin directory and passes `OPENROUTER_API_KEY` to the MCP process. Use the plugin installation rather than adding a separate `[mcp_servers.jev-review]` entry to `~/.codex/config.toml`; a manual entry needs its own concrete path and can override the plugin server. Restart Codex after changing its environment. To update, run `codex plugin marketplace upgrade agents` and reinstall with `codex plugin add jev-review@agents`. Start a new Codex task to load the updated tools.
 
 To develop the plugin, install dependencies and build with Bun:
 
@@ -101,20 +101,9 @@ There is deliberately no synthetic “82/100” overall score. Dimension changes
 
 ## Client setup
 
-All clients launch the committed `dist/server.js` bundle with Bun over stdio. Use an absolute path to your local clone. Keep API keys in your environment or a local, uncommitted client configuration.
+All clients launch the committed `dist/server.js` bundle with Bun over stdio. Codex resolves the installed plugin path automatically. For clients configured manually, use an absolute path into `agents/plugins/jev-review` and keep API keys in your environment or a local, uncommitted client configuration.
 
-### Codex (manual MCP setup without the plugin marketplace)
-
-For manual setup without the plugin marketplace, pass through the OpenRouter key in `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.jev-review]
-command = "bun"
-args = ["/absolute/path/to/agents/plugins/jev-review/dist/server.js"]
-env_vars = ["OPENROUTER_API_KEY"]
-```
-
-Set `JEV_MODEL` in the MCP process environment to pin a model. If Codex does not pass through user variables, set `OPENROUTER_API_KEY` in the local `[mcp_servers.jev-review.env]` table instead; do not commit that configuration. Restart Codex after editing the MCP configuration.
+Set `JEV_MODEL` in the MCP process environment to pin a model. For Codex, install Jev Review from the Agents marketplace as shown above.
 
 ### Claude Code
 
