@@ -12,7 +12,7 @@ For nontrivial coding issues, include the installed Jev Review skill. After a co
 
 ## Receipt and evidence
 
-Receipt fields only: `task_id`, `status`, full `base_sha`, `changed_paths`, checks (command/status/environment/evidence), `open_findings`, `next_action`. Validate via adapter; receipt is a claim, not proof. Keep logs in referenced files. Summarize Jev baseline, score movement, and remaining concerns within the 2 KiB receipt; never store full responses in Beads or packets.
+Receipt fields only: `task_id`, `status`, full `base_sha`, `changed_paths`, checks (command/status/environment/evidence), `open_findings`, `next_action`. Validate with `ledger_validate_receipt`; receipt is a claim, not proof. Keep logs in referenced files. Summarize Jev baseline, score movement, and remaining concerns within the 2 KiB receipt; never store full responses in Beads or packets.
 
 Map each criterion/target to the smallest representative check. Verify actual command, exit status, selected tests/targets, candidate state, toolchain, services, fixtures, and environment. Command names, summaries, or matching counts do not prove coverage. Reuse valid evidence for unchanged inputs.
 

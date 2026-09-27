@@ -1,6 +1,6 @@
 # Beads ledger design
 
-Repository `docs/agent/work/README.md` and the bounded adapter are authoritative.
+Repository `docs/agent/work/README.md` and this plugin's bounded MCP tools are authoritative.
 
 ## Graph and ownership
 

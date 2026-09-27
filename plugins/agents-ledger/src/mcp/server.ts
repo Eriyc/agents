@@ -18,7 +18,7 @@ function response(work: () => Promise<string>): Promise<{ content: Array<{ type:
 }
 
 export function createMcpServer(run: RunCommand = runCommand): McpServer {
-  const server = new McpServer({ name: "agents-ledger", version: "0.1.0" }, {
+  const server = new McpServer({ name: "agents-ledger", version: "0.2.0" }, {
     instructions: "Use explicit workspaceRoot and goalDir on every call. These tools read bounded Beads and document context; only the coordinator changes Beads with bd."
   });
 
